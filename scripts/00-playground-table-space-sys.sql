@@ -1,0 +1,2 @@
+CREATE TABLESPACE playground DATAFILE '/u01/app/oracle/oradata/playground.dbf' SIZE 50M
+    EXTENT MANAGEMENT LOCAL UNIFORM SIZE 128K;
