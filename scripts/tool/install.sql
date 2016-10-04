@@ -5,6 +5,12 @@
 @ 03-dbms_sesion-grants-tool-sys.sql;
 
 -- tool user
+@ tables/apex_app_monitor.sql;
+@ tables/apex_comp_maping.sql;
+@ tables/ddl_log.sql;
+@ tables/os_users_mapping.sql;
+
+
 @ scripts/00.apex_comp_maping.sql;
 @ scripts/01.context_tool.sql;
 @ scripts/02.al_ddl_log_apx.sql;

@@ -45,29 +45,33 @@ as
                                 );        
     end init_gen_api_clob;
 
-    function export(            
+    procedure export(            
             p_app_id       number,
-            p_page_id      number default null,
-            p_comp_id      number default null,
-            p_workspace_id number default null,
-            p_component    varchar2 default null)
-        return clob
+            p_page_id      number   default null,
+            p_comp_id      number   default null,
+            p_component    varchar2 default null,
+            p_workspace_id number   default null,
+            p_ddl_id       number   default null
+            )
     as
        v_workspace_id number := p_workspace_id;
+       v_admin_ws_id  number;
+       v_script       clob;
     begin
-      if v_workspace_id is null then
+    
+        if v_workspace_id is null then
           select workspace_id 
             into v_workspace_id
             from apex_app_monitor
            where 1=1
              and app_id = p_app_id;
-      end if;
+        end if;
       
-       apex_050000.WWV_FLOW_SECURITY.G_SECURITY_GROUP_ID := v_workspace_id;
-       
-        -- init_gen_api_clob
+        apex_050000.wwv_flow.g_flow_id := p_app_id;
+        apex_050000.wwv_flow_security.g_security_group_id := v_workspace_id;
+
         init_gen_api_clob;
-    
+
         apex_050000.wwv_flow_gen_api2
                    .export(  p_flow_id                  => p_app_id
                            , p_export_ir_public_reports => 'Y'
@@ -76,8 +80,71 @@ as
                            , p_component                => p_component
                            ) ;
         
-        return get_gen_api_clob;
+        v_script := get_gen_api_clob;
+        
+        if p_ddl_id is not null then
+            update ddl_log
+               set sql_text =  v_script
+             where id = p_ddl_id;  
+        end if;
+        
     end export;
+    
+    function null_in_str(p_val varchar2) return varchar2 is
+      v_ret varchar2(200) := p_val;
+    begin
+       if v_ret is null then
+          v_ret := 'null';
+       end if;
+       return v_ret;
+    end;
+    
+    procedure export_via_job (
+        p_app_id       number,
+        p_page_id      number   default null,
+        p_comp_id      number   default null,
+        p_component    varchar2 default null,
+        p_workspace_id number   default null,
+        p_ddl_id       number   default null
+    ) is 
+      v_job_exe varchar2(32000) :=
+                 'DECLARE
+                  BEGIN
+                    p$apx_utl.export(
+                              p_app_id       => #APP_ID#,
+                              p_page_id      => #PAGE_ID#,
+                              p_comp_id      => #COMP_ID#, 
+                              p_component    => ''#COMPONENT#'',
+                              p_workspace_id => #WORKSPACE_ID#,
+                              p_ddl_id       => #DDL_LOG_ID#);
+                   
+                   exception
+                   when others then
+                     null;
+                     -- LOGERR TODO
+                  END;';
+       v_job_name varchar2(200);
+     begin
+        
+        v_job_exe := replace(v_job_exe, '#APP_ID#'      , p_app_id);
+        v_job_exe := replace(v_job_exe, '#PAGE_ID#'     , null_in_str(p_page_id));
+        v_job_exe := replace(v_job_exe, '#COMP_ID#'     , null_in_str(p_comp_id));
+        v_job_exe := replace(v_job_exe, '#COMPONENT#'   , null_in_str(p_component));
+        v_job_exe := replace(v_job_exe, '#WORKSPACE_ID#', null_in_str(p_workspace_id));
+        v_job_exe := replace(v_job_exe, '#DDL_LOG_ID#'  , null_in_str(p_ddl_id));
+        
+        v_job_name := 'APEX_EXPORT_' || p_app_id || '_' || p_ddl_id;
+        
+        dbms_output.put_line(v_job_exe);
+        
+        DBMS_SCHEDULER.CREATE_JOB (
+           job_name                 =>  v_job_name,
+           job_type                 =>  'PLSQL_BLOCK',
+           job_action               =>  v_job_exe,
+           enabled                  =>  true,
+           auto_drop                =>  true
+        );
+   end;
     
     
 end p$apx_utl;

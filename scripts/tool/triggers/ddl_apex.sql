@@ -14,6 +14,8 @@
         v_object_name varchar2(100);
         v_apex_user   varchar2(100);
         v_monitor     number;
+        v_script      clob;
+        v_id          number;
     begin
     
          select count(1)
@@ -30,33 +32,41 @@
           where apex_table_name = :new.flow_table;
           
         if v_monitor > 0 and v_ax_tab_name  is not null then
-            
+             v_id := ddl_seq_id.nextval;
+             
              select max(os_user), max(apex_user)
                into v_os_user, v_apex_user
                from os_users_mapping
               where upper(apex_user) = upper(:new.flow_user);
             
             if :new.page_id is not null then
-               v_object_name := translate(
+              v_object_name := translate(
                                     ( 'f'      || :new.flow_id ||
-                                      '_page_' || :new.page_id), ' ', '_');
+                                      '_page_' || :new.page_id), ' ', '_');                                      
+              
             else 
                v_object_name := translate( 
                                     ( 'f' || :new.flow_id || 
                                       '_' || v_comp_type  || 
                                       '_' || :new.object_name), ' ', '_');
+                                      
+               
+                                                           
             end if;
             
             if :new.audit_action = 'I' then
                  insert into ddl_log
-                 select 'CREATE'
+                 select
+                    v_id
+                  , 'CREATE'
                   , 'APEX'
                   , lower(v_object_name)
                   , v_apex_user
                   , sysdate
-                  , null -- ddl for export apex page TODO
+                  , v_script
                   , v_os_user
                   , 'N'
+                  , :new.flow_id
                   , :new.page_id
                   , :new.flow_table_pk
                   , :new.security_group_id
@@ -64,14 +74,17 @@
                    from dual;
             elsif :new.audit_action = 'U' then
                  insert into ddl_log
-                 select 'UPDATE'
+                 select
+                    v_id
+                  , 'UPDATE'
                   , 'APEX'
                   , lower(v_object_name)
                   , v_apex_user
                   , sysdate
-                  , null -- ddl for export apex page TODO
+                  , v_script
                   , v_os_user
                   , 'N'
+                  , :new.flow_id
                   , :new.page_id
                   , :new.flow_table_pk
                   , :new.security_group_id

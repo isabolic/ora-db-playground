@@ -3,7 +3,9 @@
 --------------------------------------------------------
 
   CREATE TABLE "DDL_LOG" 
-   (    "OPERATION" VARCHAR2(30 BYTE), 
+   (
+   "ID"        NUMBER,
+   "OPERATION" VARCHAR2(30 BYTE), 
     "OBJ_OWNER" VARCHAR2(30 BYTE), 
     "OBJECT_NAME" VARCHAR2(30 BYTE), 
     "ATTEMPT_BY" VARCHAR2(30 BYTE), 
