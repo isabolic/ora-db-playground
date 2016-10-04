@@ -57,6 +57,8 @@
                   , null -- ddl for export apex page TODO
                   , v_os_user
                   , 'N'
+                  , :new.page_id
+                  , :new.flow_table_pk
                    from dual;
             elsif :new.audit_action = 'U' then
                  insert into ddl_log
@@ -68,6 +70,8 @@
                   , null -- ddl for export apex page TODO
                   , v_os_user
                   , 'N'
+                  , :new.page_id
+                  , :new.flow_table_pk
                    from dual;
              /** DELETE **/      
             /*else
