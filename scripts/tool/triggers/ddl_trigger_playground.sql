@@ -49,19 +49,19 @@ BEGIN
   IF oper IN ('CREATE', 'DROP') THEN
     INSERT INTO ddl_log
     SELECT ora_sysevent, ora_dict_obj_owner, 
-    ora_dict_obj_name, v_apex_user, SYSDATE, l_action, v_os_user, 'N', null, null
+    ora_dict_obj_name, v_apex_user, SYSDATE, l_action, v_os_user, 'N', null, null, null, null
     FROM DUAL;
   ELSIF oper = 'ALTER' THEN
     INSERT INTO ddl_log
     SELECT ora_sysevent, ora_dict_obj_owner, 
-    ora_dict_obj_name, v_apex_user, SYSDATE, l_action, v_os_user, 'N', null, null
+    ora_dict_obj_name, v_apex_user, SYSDATE, l_action, v_os_user, 'N', null, null, null, null
     FROM sys.gv_$sqltext
     WHERE UPPER(sql_text) LIKE 'ALTER%'
     AND UPPER(sql_text) LIKE '%NEW_TABLE%';
   else
     INSERT INTO ddl_log
     SELECT ora_sysevent, ora_dict_obj_owner, 
-    ora_dict_obj_name, v_apex_user, SYSDATE, l_action, v_os_user, 'N', null, null
+    ora_dict_obj_name, v_apex_user, SYSDATE, l_action, v_os_user, 'N', null, null, null, null
     FROM DUAL;  
   END IF;
   

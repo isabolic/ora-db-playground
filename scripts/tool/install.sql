@@ -13,3 +13,9 @@
 @ triggers/ddl_trigger_playground.sql;
 
 @ views/v_user_ddl_log.sql;
+
+@ packages/p$utl_context.pks;
+@ packages/p$utl_context.pkb;
+
+@ packages/p$apx_utl.pks;
+@ packages/p$apx_utl.pkb;

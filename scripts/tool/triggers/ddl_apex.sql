@@ -59,6 +59,8 @@
                   , 'N'
                   , :new.page_id
                   , :new.flow_table_pk
+                  , :new.security_group_id
+                  , v_comp_type
                    from dual;
             elsif :new.audit_action = 'U' then
                  insert into ddl_log
@@ -72,6 +74,8 @@
                   , 'N'
                   , :new.page_id
                   , :new.flow_table_pk
+                  , :new.security_group_id
+                  , v_comp_type
                    from dual;
              /** DELETE **/      
             /*else
