@@ -5,23 +5,37 @@
 @ 03-dbms_sesion-grants-tool-sys.sql;
 
 -- tool user
+-- tables
 @ tables/apex_app_monitor.sql;
 @ tables/apex_comp_maping.sql;
 @ tables/ddl_log.sql;
 @ tables/os_users_mapping.sql;
+@ tables/log.sql;
 
-
+-- scripts
 @ scripts/00.apex_comp_maping.sql;
 @ scripts/01.context_tool.sql;
 @ scripts/02.al_ddl_log_apx.sql;
+@ scripts/03.al_apex_comp_maping_add_col.sql;
+@ scripts/04.upd_apex_col_name.sql;
+@ scripts/05.upd_apex_comp_map_brea_entry_menu.sql;
+@ scripts/06.ins_version_control_structure.sql;
+@ scripts/07.constraint_apex_comp_map_vc.sql;
+@ scripts/08.al_ddl_log_db_obj_type.sql;
 
-@ triggers/ddl_apex.sql;
-@ triggers/ddl_trigger_playground.sql;
-
-@ views/v_user_ddl_log.sql;
-
+-- packages
 @ packages/p$utl_context.pks;
 @ packages/p$utl_context.pkb;
 
 @ packages/p$apx_utl.pks;
 @ packages/p$apx_utl.pkb;
+
+-- standalone program units
+@ procedures/p_log.sql;
+
+-- triggers
+@ triggers/ddl_apex.sql;
+@ triggers/ddl_trigger_playground.sql;
+
+-- views
+@ views/v_user_ddl_log.sql;
