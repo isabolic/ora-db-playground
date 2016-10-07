@@ -1,4 +1,4 @@
--- SYS user install
+-- SYS user scripts for tool schema
 @ 00-tool-table-space-sys.sql;
 @ 01-tool-user-create-sys.sql;
 @ 02-inital-grants-tool-sys.sql;
@@ -22,6 +22,13 @@
 @ scripts/06.ins_version_control_structure.sql;
 @ scripts/07.constraint_apex_comp_map_vc.sql;
 @ scripts/08.al_ddl_log_db_obj_type.sql;
+@ scripts/09.upd_code_to_upper_case_vcs.sql;
+@ scripts/10.ins_config_root_dir.sql;
+@ scripts/11.del_vcse_ax_root_fld_shema.sql;
+@ scripts/12.upd_code_vcse.sql
+
+-- sequences
+@ sequences/seq_id.sql;
 
 -- packages
 @ packages/p$utl_context.pks;
@@ -29,6 +36,9 @@
 
 @ packages/p$apx_utl.pks;
 @ packages/p$apx_utl.pkb;
+
+@ packages/p$ver_ctrl.pks;
+@ packages/p$ver_ctrl.pkb;
 
 -- standalone program units
 @ procedures/p_log.sql;
