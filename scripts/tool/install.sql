@@ -25,7 +25,8 @@
 @ scripts/09.upd_code_to_upper_case_vcs.sql;
 @ scripts/10.ins_config_root_dir.sql;
 @ scripts/11.del_vcse_ax_root_fld_shema.sql;
-@ scripts/12.upd_code_vcse.sql
+@ scripts/12.upd_code_vcse.sql;
+@ scripts/13.del_code_vcse_job_seq.sql;
 
 -- sequences
 @ sequences/seq_id.sql;
