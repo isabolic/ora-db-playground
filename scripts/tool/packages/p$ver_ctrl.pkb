@@ -45,14 +45,12 @@
       from config
      where code = 'VER_CON_ROOT_FOLDER';
      
-    if instr(v_path, '.sql') = 0 then
-       v_file_name := v_file_name || '.sql';
-    end if;
-     
     if   instr(v_root, '/', -1)  
        < length(v_root) then
        v_root := v_root || '/'; -- add backspash
     end if;
+    
+    p_log(v_path);
     
     if   instr(v_path, '/', -1)  
        < length(v_path) then
@@ -64,11 +62,10 @@
     v_path := replace(v_root || v_path, '//', '/');
     
     v_path := replace(v_path, '#APEX#'   , 'apex');
-    v_path := replace(v_path, '#APP_ID#', v_r_ddl_log.apex_app_id);
+    v_path := replace(v_path, '#APP_ID#' , v_r_ddl_log.apex_app_id);
     v_path := replace(v_path, '#SCHEMA#' , v_r_ddl_log.obj_owner);
+    v_path := replace(v_path, '#NAME#'   , lower(v_r_ddl_log.object_name));
     
-    
-   
     return v_path;
   end get_path;
 

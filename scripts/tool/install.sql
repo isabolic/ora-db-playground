@@ -27,6 +27,8 @@
 @ scripts/11.del_vcse_ax_root_fld_shema.sql;
 @ scripts/12.upd_code_vcse.sql;
 @ scripts/13.del_code_vcse_job_seq.sql;
+@ scripts/14.at_vcse_add_col_file_ext.sql;
+@ scripts/15.upd_vcse_pck_file_ext.sql;
 
 -- sequences
 @ sequences/seq_id.sql;

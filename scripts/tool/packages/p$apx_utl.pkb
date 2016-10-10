@@ -66,6 +66,7 @@ as
            where 1=1
              and app_id = p_app_id;
         end if;
+                
       
         apex_050000.wwv_flow.g_flow_id := p_app_id;
         apex_050000.wwv_flow_security.g_security_group_id := v_workspace_id;
@@ -97,13 +98,13 @@ as
           v_ret := 'null';
        end if;
        return v_ret;
-    end;
+    end null_in_str;
     
     procedure export_via_job (
         p_app_id       number,
         p_page_id      number   default null,
         p_comp_id      number   default null,
-        p_component    varchar2 default null,
+        p_component    varchar2 default null,        
         p_workspace_id number   default null,
         p_ddl_id       number   default null
     ) is 
@@ -144,9 +145,213 @@ as
            enabled                  =>  true,
            auto_drop                =>  true
         );
-   end;
+   end export_via_job;
+   
+    function get_apx_tab_pk(
+            p_table_name   varchar2,
+            p_object_name  varchar2,
+            p_date_time    date,
+            p_app_id       number,
+            p_workspace_id number,
+            p_action       varchar2 default 'I')
+        return number
+    is
+    v_id        number;
+    v_sql       varchar2(2000);
+    v_col_name  varchar2(200);
+    v_date_time varchar2(50) := to_char(p_date_time, 'DD.MM.YYYY HH24:MI:SS');
+    begin
+    
+     select max(apex_col_name)
+           into v_col_name
+           from apex_comp_maping
+          where apex_table_name = p_table_name;    
+   
+    v_sql := ' select id          ' ||
+             '   from apex_050000.' || p_table_name ||
+             ' where  1=1 ' ||
+             '   and '      || v_col_name || ' = '''|| p_object_name || '''';
+    
+    if p_action = 'I' then
+       v_sql := v_sql || '   and created_on  = to_date(''' || v_date_time || ''', ''DD.MM.YYYY HH24:MI:SS'')';
+    elsif p_action = 'U' then 
+       v_sql := v_sql || '  and last_updated_by  = to_date(''' || v_date_time || ''', ''DD.MM.YYYY HH24:MI:SS'')';
+    end if;
+    
+    p_log(v_sql);
+    
+    execute immediate v_sql into v_id;
+    
+    p_log('v_id = ' || v_id);
+    
+    return v_id;
+    exception 
+       when others then
+         p_log(sqlerrm);
+         return null;
+    end get_apx_tab_pk;
+    
+    procedure export_apex_comp_to_ddl_log (
+        p_ddl_id      ddl_log.id%type
+    ) is
+      v_ddl_row      ddl_log%rowtype;
+      v_apex_table   apex_comp_maping.apex_table_name%type;
+      v_operation    varchar2(1);
+      pragma autonomous_transaction; 
+    begin
+    
+       select * 
+         into v_ddl_row
+         from ddl_log
+        where 1=1
+          and id = p_ddl_id;
+        
+       if v_ddl_row.obj_owner != 'APEX' then
+          Raise_Application_Error (-20343, 'The ddl_log row is not obj_owner apex');
+       end if;
+        
+       if     v_ddl_row.apex_page_id is null 
+          and v_ddl_row.apex_comp_id is null then
+          
+          select apex_table_name
+            into v_apex_table
+            from apex_comp_maping
+           where comp_type = v_ddl_row.apex_component_type;
+           
+          case 
+            when v_ddl_row.operation = 'CREATE' then
+             v_operation := 'I';            
+           when v_ddl_row.operation = 'UPDATE' then
+             v_operation := 'U';
+           when v_ddl_row.operation = 'DELETE' then
+             v_operation := 'D';
+          end case;
+           
+          
+           v_ddl_row.apex_comp_id := get_apx_tab_pk(
+            p_table_name   => v_apex_table,
+            p_object_name  => v_ddl_row.object_name,
+            p_date_time    => v_ddl_row.attempt_dt,
+            p_app_id       => v_ddl_row.apex_app_id,
+            p_workspace_id => v_ddl_row.apex_workspace_id,
+            p_action       => v_operation);
+            
+            update ddl_log
+               set apex_comp_id = v_ddl_row.apex_comp_id
+             where id = v_ddl_row.id; 
+             commit;
+             
+       end if;
+      
+       export_via_job (
+            p_app_id        => v_ddl_row.apex_app_id,
+            p_page_id       => v_ddl_row.apex_page_id,
+            p_comp_id       => v_ddl_row.apex_comp_id,
+            p_component     => v_ddl_row.apex_component_type,       
+            p_workspace_id  => v_ddl_row.apex_workspace_id,       
+            p_ddl_id        => v_ddl_row.id
+       );
+      
+      
+      
+    end export_apex_comp_to_ddl_log;
+    
+    function f_get_file_name (
+        p_ddl_id      ddl_log.id%type
+    ) return varchar2 
+    is
+        v_ddl_row      ddl_log%rowtype;
+        v_name         varchar2(200);
+        v_vcse_id      version_control_structure.id%type;
+        v_file_ext     version_control_structure.file_ext%type := g_script_file_type;
+    begin
+     
+     select * 
+         into v_ddl_row
+         from ddl_log
+        where 1=1
+          and id = p_ddl_id;
+    
+    -- apex      
+    if v_ddl_row.obj_owner = 'APEX' then
+       -- page   
+       if v_ddl_row.apex_page_id is null then
+          v_name := lower(
+                      translate
+                      (
+                        (
+                          'f' || v_ddl_row.apex_app_id || '_' || 
+                           v_ddl_row.apex_component_type  || '_' || 
+                           v_ddl_row.object_name || '.' || 
+                           v_file_ext
+                        ),
+                        ' ', '_'
+                      )
+                    );
+       -- sh. comp.
+       else
+          v_name := lower(
+                      translate
+                      (
+                        ( 
+                          'f' || v_ddl_row.apex_app_id || '_page_' || 
+                           v_ddl_row.apex_page_id || '.' || v_file_ext
+                         )
+                        , ' ', '_'
+                      )
+                    );
+       end if;
+    else
+       -- ddl objects
+       select max(id), max(file_ext)
+         into v_vcse_id, v_file_ext
+         from version_control_structure 
+        where 1=1
+          and code = v_ddl_row.db_object_type;
+          
+      if v_file_ext is null then
+         v_file_ext := g_script_file_type;
+      end if;
+
+      if v_vcse_id is not null then
+          v_name := lower(v_ddl_row.object_name || '.' || v_file_ext );
+      else
+          v_name := lower(
+                      translate
+                      ( 
+                        (
+                          v_ddl_row.id          || '_' || 
+                          v_ddl_row.operation   || '_' || 
+                          v_ddl_row.object_name || '.' || v_file_ext
+                        )
+                         ,' ', '_' 
+                      )                      
+                   );                      
+      end if;
+    end if;
     
     
+    return v_name;
+    end f_get_file_name;
+    
+    procedure generate_apex_comp_script is
+    begin
+    for i in (select id 
+                from v_user_ddl_log 
+               where sql_text is null 
+                 and obj_owner = 'APEX' ) 
+    loop
+       p$apx_utl.export_apex_comp_to_ddl_log(i.id);
+    end loop;
+    end generate_apex_comp_script;
+    
+    procedure upd_export_status(p_ddl_id ddl_log.id%type) is
+    begin
+      update ddl_log
+         set is_exported = 'Y'
+       where id = p_ddl_id;
+    end upd_export_status;
+
 end p$apx_utl;
 
 /
