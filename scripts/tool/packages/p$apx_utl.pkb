@@ -111,6 +111,7 @@ as
       v_job_exe varchar2(32000) :=
                  'DECLARE
                   BEGIN
+                    p$utl_context.set_user(p_user => ''#USER#'');
                     p$apx_utl.export(
                               p_app_id       => #APP_ID#,
                               p_page_id      => #PAGE_ID#,
@@ -120,9 +121,8 @@ as
                               p_ddl_id       => #DDL_LOG_ID#);
                    
                    exception
-                   when others then
-                     null;
-                     -- LOGERR TODO
+                   when others then                     
+                     p_log(''p$apx_utl.export_via_job '' || sqlerrm);
                   END;';
        v_job_name varchar2(200);
      begin
@@ -133,12 +133,11 @@ as
         v_job_exe := replace(v_job_exe, '#COMPONENT#'   , null_in_str(p_component));
         v_job_exe := replace(v_job_exe, '#WORKSPACE_ID#', null_in_str(p_workspace_id));
         v_job_exe := replace(v_job_exe, '#DDL_LOG_ID#'  , null_in_str(p_ddl_id));
+        v_job_exe := replace(v_job_exe, '#USER#'        , p$utl_context.get_user);
         
         v_job_name := 'APEX_EXPORT_' || p_app_id || '_' || p_ddl_id;
         
-        dbms_output.put_line(v_job_exe);
-        
-        DBMS_SCHEDULER.CREATE_JOB (
+        dbms_scheduler.create_job (
            job_name                 =>  v_job_name,
            job_type                 =>  'PLSQL_BLOCK',
            job_action               =>  v_job_exe,

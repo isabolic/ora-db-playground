@@ -157,8 +157,7 @@
                    );                      
       end if;
     end if;
-    
-    
+
     return v_name;
     end f_get_file_name;
 

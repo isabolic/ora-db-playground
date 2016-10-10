@@ -35,6 +35,11 @@
        end;
        dbms_session.set_context('TOOL', 'USER', v_apex_user);
    END set_user;
+   
+   function get_user return varchar2 is
+   begin
+     return sys_context('TOOL', 'USER'); 
+   end get_user;
 end p$utl_context;
 
 /

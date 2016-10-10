@@ -13,13 +13,6 @@ as
             p_workspace_id number   default null,
             p_ddl_id       number   default null) ;
             
-    procedure export_via_job(
-            p_app_id       number,
-            p_page_id      number   default null,
-            p_comp_id      number   default null,
-            p_component    varchar2 default null,
-            p_workspace_id number   default null,
-            p_ddl_id       number   default null) ;
             
     function get_apx_tab_pk(
             p_table_name   varchar2,
