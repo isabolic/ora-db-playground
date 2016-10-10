@@ -178,16 +178,11 @@ as
        v_sql := v_sql || '  and last_updated_by  = to_date(''' || v_date_time || ''', ''DD.MM.YYYY HH24:MI:SS'')';
     end if;
     
-    p_log(v_sql);
-    
     execute immediate v_sql into v_id;
-    
-    p_log('v_id = ' || v_id);
     
     return v_id;
     exception 
        when others then
-         p_log(sqlerrm);
          return null;
     end get_apx_tab_pk;
     
@@ -256,83 +251,7 @@ as
       
     end export_apex_comp_to_ddl_log;
     
-    function f_get_file_name (
-        p_ddl_id      ddl_log.id%type
-    ) return varchar2 
-    is
-        v_ddl_row      ddl_log%rowtype;
-        v_name         varchar2(200);
-        v_vcse_id      version_control_structure.id%type;
-        v_file_ext     version_control_structure.file_ext%type := g_script_file_type;
-    begin
-     
-     select * 
-         into v_ddl_row
-         from ddl_log
-        where 1=1
-          and id = p_ddl_id;
     
-    -- apex      
-    if v_ddl_row.obj_owner = 'APEX' then
-       -- page   
-       if v_ddl_row.apex_page_id is null then
-          v_name := lower(
-                      translate
-                      (
-                        (
-                          'f' || v_ddl_row.apex_app_id || '_' || 
-                           v_ddl_row.apex_component_type  || '_' || 
-                           v_ddl_row.object_name || '.' || 
-                           v_file_ext
-                        ),
-                        ' ', '_'
-                      )
-                    );
-       -- sh. comp.
-       else
-          v_name := lower(
-                      translate
-                      (
-                        ( 
-                          'f' || v_ddl_row.apex_app_id || '_page_' || 
-                           v_ddl_row.apex_page_id || '.' || v_file_ext
-                         )
-                        , ' ', '_'
-                      )
-                    );
-       end if;
-    else
-       -- ddl objects
-       select max(id), max(file_ext)
-         into v_vcse_id, v_file_ext
-         from version_control_structure 
-        where 1=1
-          and code = v_ddl_row.db_object_type;
-          
-      if v_file_ext is null then
-         v_file_ext := g_script_file_type;
-      end if;
-
-      if v_vcse_id is not null then
-          v_name := lower(v_ddl_row.object_name || '.' || v_file_ext );
-      else
-          v_name := lower(
-                      translate
-                      ( 
-                        (
-                          v_ddl_row.id          || '_' || 
-                          v_ddl_row.operation   || '_' || 
-                          v_ddl_row.object_name || '.' || v_file_ext
-                        )
-                         ,' ', '_' 
-                      )                      
-                   );                      
-      end if;
-    end if;
-    
-    
-    return v_name;
-    end f_get_file_name;
     
     procedure generate_apex_comp_script is
     begin
@@ -344,14 +263,8 @@ as
        p$apx_utl.export_apex_comp_to_ddl_log(i.id);
     end loop;
     end generate_apex_comp_script;
-    
-    procedure upd_export_status(p_ddl_id ddl_log.id%type) is
-    begin
-      update ddl_log
-         set is_exported = 'Y'
-       where id = p_ddl_id;
-    end upd_export_status;
 
+    
 end p$apx_utl;
 
 /
