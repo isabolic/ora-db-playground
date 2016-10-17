@@ -6,14 +6,15 @@
 
   procedure export(p_ddl_id ddl_log.id%type)     
   is
-   v_clob         v_user_ddl_log.sql_text%type;
-   v_row_ddl_log  v_user_ddl_log%rowtype;
+   v_clob         ddl_log.sql_text%type;
+   v_row_ddl_log  ddl_log%rowtype;
    v_exist        number;
+   pragma autonomous_transaction;
   begin
   
     select *
       into v_row_ddl_log
-      from v_user_ddl_log
+      from ddl_log
      where 1=1
        and id = p_ddl_id;
     
@@ -42,6 +43,7 @@
         update ddl_log
            set sql_text = v_clob
          where id = p_ddl_id;
+         commit;
     else
        p_log('OBJECT "'|| v_row_ddl_log.obj_owner || '.' || v_row_ddl_log.object_name || ' doesn''t exist.' );
     end if;
@@ -92,11 +94,11 @@
   end export_via_job;
 
   procedure export_db_object_to_ddl_log (p_ddl_id ddl_log.id%type) as
-    v_row_ddl_log  v_user_ddl_log%rowtype;
+    v_row_ddl_log  ddl_log%rowtype;
   begin
     select *
       into v_row_ddl_log
-      from v_user_ddl_log
+      from ddl_log
      where 1=1
        and id = p_ddl_id;
     
@@ -118,7 +120,39 @@
        p$db_object.export_db_object_to_ddl_log(i.id);
     end loop;
   end generate_db_object_script;
-
+  
+  function is_object_valid( p_object_name varchar2
+                           ,p_owner       varchar2
+                           ,p_object_type varchar2) return boolean is
+  is_valid number; 
+  begin
+  
+   select  decode(max(x.status), 'VALID', 1, 0)
+       into is_valid 
+       from sys.all_objects x
+      where 1=1 
+        and upper(x.object_name) = upper(p_object_name)
+        and upper(x.owner)       = upper(p_owner)
+        and upper(x.object_type) = upper(p_object_type); 
+        
+     if is_valid = 1 then
+       return true;
+     else
+       return false;
+     end if;
+  end is_object_valid;
+  
+  function is_object_valid_txt ( p_object_name varchar2
+                                ,p_owner       varchar2
+                                ,p_object_type varchar2) return varchar2 is 
+   begin                             
+   if is_object_valid(p_object_name, p_owner, p_object_type) = true then
+      return 'Y';
+   else
+      return 'N';
+   end if;
+   end is_object_valid_txt;
+   
 end p$db_object;
 
 /

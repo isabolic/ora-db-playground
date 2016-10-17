@@ -4,21 +4,22 @@
 
   CREATE OR REPLACE PACKAGE BODY "P$VER_CTRL" as
 
-  function get_path(p_ddl_id ddl_log.id%type) return varchar2 as
+  function get_path(  p_ddl_id ddl_log.id%type
+                    , withFile varchar2 default 'Y') return varchar2 as
     v_is_apex     boolean := false;
     v_object_type ddl_log.db_object_type%type;
     v_path        varchar2(2000);
-    v_r_ddl_log   v_user_ddl_log%rowtype;
-    v_file_name   v_user_ddl_log.file_name%type;
+    v_r_ddl_log   ddl_log%rowtype;
+    v_file_name   varchar2(500);
     v_root        config.value%type;
   begin
   
     select *
       into v_r_ddl_log
-      from v_user_ddl_log x
+      from ddl_log x
      where id = p_ddl_id;
      
-     v_file_name := v_r_ddl_log.file_name;
+     v_file_name := f_get_file_name(p_ddl_id);
    
     if  v_r_ddl_log.apex_app_id is not null then
          v_is_apex     := true;
@@ -28,7 +29,7 @@
     end if;
 
     if v_is_apex = true then       
-         select path
+         select max(path)
            into v_path 
            from apex_comp_maping acmg
            join version_control_structure vcse on (acmg.id = vcse.acmg_id)
@@ -40,13 +41,15 @@
            select path
              from version_control_structure
             where code = v_object_type
+              and v_r_ddl_log.operation != 'DROP'
             union all
            select path
              from version_control_structure
             where code = 'SCRIPT'
               and not exists(select 1 
                                from version_control_structure
-                              where code = v_object_type)
+                              where code = v_object_type
+                                and v_r_ddl_log.operation != 'DROP')
         );
     end if;
     
@@ -60,11 +63,13 @@
        v_root := v_root || '/'; -- add backspash
     end if;    
     
-    if   instr(v_path, '/', -1)  
-       < length(v_path) then
-       v_path := v_path || '/' || v_file_name; -- add backspash
-    else
-       v_path := v_path || v_file_name;
+    if withFile = 'Y' then
+        if   instr(v_path, '/', -1)  
+           < length(v_path) then
+           v_path := v_path || '/' || v_file_name; -- add backspash
+        else
+           v_path := v_path || v_file_name;
+        end if;
     end if;
     
     v_path := replace(v_root || v_path, '//', '/');
@@ -76,6 +81,15 @@
     
     return v_path;
   end get_path;
+  
+  procedure upd_export_status_all is
+    pragma autonomous_transaction;
+    begin
+      update ddl_log
+         set is_exported = 'Y'
+       where id in (select id from v_user_ddl_log);
+       commit;
+  end upd_export_status_all;
   
   procedure upd_export_status(p_ddl_id ddl_log.id%type) is
     begin
@@ -137,8 +151,11 @@
         where 1=1
           and code = v_ddl_row.db_object_type;
           
-      if v_file_ext is null then
+      if    v_file_ext is null 
+         or v_ddl_row.operation = 'DROP' then
          v_file_ext := g_script_file_type;
+         -- reset to null for drop objects go into scripts file
+         v_vcse_id := null;
       end if;
 
       if v_vcse_id is not null then
@@ -160,7 +177,18 @@
 
     return v_name;
     end f_get_file_name;
+    
+    function are_job_exports_done return number is
+    v_is_running number;
+    begin
+      select decode(max(job_name), null, 1, 0)
+        into v_is_running
+        from all_scheduler_running_jobs
+       where 1=1
+         and job_name like '%EXPORT%';
 
+        return v_is_running;
+    end are_job_exports_done;
 end p$ver_ctrl;
 
 /

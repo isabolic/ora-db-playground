@@ -30,6 +30,7 @@
 @ scripts/14.at_vcse_add_col_file_ext.sql;
 @ scripts/15.upd_vcse_pck_file_ext.sql;
 @ scripts/16.al_ddl_log_pkey.sql;
+@ scripts/17.update_comp_type_b_entry.sql;
 
 -- sequences
 @ sequences/seq_id.sql;

@@ -11,6 +11,14 @@
     
     procedure generate_db_object_script;
     
+    function is_object_valid( p_object_name varchar2
+                             ,p_owner       varchar2
+                             ,p_object_type varchar2) return boolean;
+    
+    function is_object_valid_txt ( p_object_name varchar2
+                                ,p_owner       varchar2
+                                ,p_object_type varchar2) return varchar2;
+    
 end p$db_object;
 
 /
