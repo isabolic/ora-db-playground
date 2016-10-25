@@ -82,19 +82,21 @@
     return v_path;
   end get_path;
   
-  procedure upd_export_status_all is
+  procedure upd_export_status_all(p_rev_hash varchar2 default null) is
     pragma autonomous_transaction;
     begin
       update ddl_log
-         set is_exported = 'Y'
+         set is_exported = 'Y',
+             revision_hash = p_rev_hash
        where id in (select id from v_user_ddl_log);
        commit;
   end upd_export_status_all;
   
-  procedure upd_export_status(p_ddl_id ddl_log.id%type) is
+  procedure upd_export_status(p_ddl_id ddl_log.id%type, p_rev_hash varchar2 default null) is
     begin
       update ddl_log
-         set is_exported = 'Y'
+         set is_exported = 'Y',
+             revision_hash = p_rev_hash
        where id = p_ddl_id;
     end upd_export_status;
     
@@ -155,7 +157,9 @@
          or v_ddl_row.operation = 'DROP' then
          v_file_ext := g_script_file_type;
          -- reset to null for drop objects go into scripts file
-         v_vcse_id := null;
+         if v_ddl_row.operation = 'DROP' then
+            v_vcse_id := null;
+         end if;
       end if;
 
       if v_vcse_id is not null then
@@ -183,12 +187,25 @@
     begin
       select decode(max(job_name), null, 1, 0)
         into v_is_running
-        from all_scheduler_running_jobs
+        from user_scheduler_running_jobs
        where 1=1
          and job_name like '%EXPORT%';
 
         return v_is_running;
     end are_job_exports_done;
+    
+    
+    function f_get_root_dir return varchar2 
+    is
+    v_ret varchar2(2000);
+    begin
+    select value
+      into v_ret
+      from config 
+     where code = 'VER_CON_ROOT_FOLDER';
+     
+     return v_ret;
+    end f_get_root_dir;
 end p$ver_ctrl;
 
 /

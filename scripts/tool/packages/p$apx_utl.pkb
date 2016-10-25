@@ -66,8 +66,7 @@ as
            where 1=1
              and app_id = p_app_id;
         end if;
-                
-      
+        
         apex_050000.wwv_flow.g_flow_id := p_app_id;
         apex_050000.wwv_flow_security.g_security_group_id := v_workspace_id;
 
@@ -80,6 +79,10 @@ as
                            , p_page_id                  => p_page_id
                            , p_component                => p_component
                            ) ;
+                           
+        apex_050000.wwv_flow_gen_api2
+                   .file_close( p_commit              => true
+                               ,p_is_component_export => true );
         
         v_script := get_gen_api_clob;
         
@@ -241,8 +244,8 @@ as
             p_app_id        => v_ddl_row.apex_app_id,
             p_page_id       => v_ddl_row.apex_page_id,
             p_comp_id       => v_ddl_row.apex_comp_id,
-            p_component     => v_ddl_row.apex_component_type,       
-            p_workspace_id  => v_ddl_row.apex_workspace_id,       
+            p_component     => v_ddl_row.apex_component_type,
+            p_workspace_id  => v_ddl_row.apex_workspace_id,
             p_ddl_id        => v_ddl_row.id
        );
       

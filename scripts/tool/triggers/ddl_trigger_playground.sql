@@ -21,7 +21,7 @@ create or alter or ddl or
         select ora_sysevent into oper from dual;
          
          -- get OS USER
-        select osuser
+        select upper(osuser)
           into v_os_user
           from sys.gv_$session
          where sid = sys_context('USERENV', 'SID') ;
@@ -56,6 +56,7 @@ create or alter or ddl or
                 and oper != 'DROP';
              
             -- generate script
+            p_log('v_is_object = ' || v_is_object);
             if v_is_object is null then
                 for i in 1..ora_sql_txt(sql_text)
                 loop
@@ -67,6 +68,7 @@ create or alter or ddl or
                    l_action := l_action || ';';
                 end if;
             end if;
+            p_log('l_action = ' || l_action);
             
             
             if oper in('CREATE', 'DROP') then
@@ -116,9 +118,7 @@ create or alter or ddl or
                   , v_os_user
                   , 'N'
                   , ora_dict_obj_type
-                   from sys.gv_$sqltext
-                  where upper(sql_text) like 'ALTER%'
-                    and upper(sql_text) like '%NEW_TABLE%';
+                   from dual;
             else
                  insert into ddl_log
                   ( id

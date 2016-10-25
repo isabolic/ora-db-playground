@@ -9,8 +9,12 @@
 @ tables/apex_app_monitor.sql;
 @ tables/apex_comp_maping.sql;
 @ tables/ddl_log.sql;
+@ tables/config.sql;
 @ tables/os_users_mapping.sql;
 @ tables/log.sql;
+
+-- sequences
+@ sequences/seq_id.sql;
 
 -- scripts
 @ scripts/00.apex_comp_maping.sql;
@@ -31,9 +35,12 @@
 @ scripts/15.upd_vcse_pck_file_ext.sql;
 @ scripts/16.al_ddl_log_pkey.sql;
 @ scripts/17.update_comp_type_b_entry.sql;
+@ scripts/18.al_ddl_log_revhash.sql;
+@ scripts/19.config_cl_file_location.sql;
 
--- sequences
-@ sequences/seq_id.sql;
+-- views
+@ views/v_user_ddl_log.sql;
+
 
 -- packages
 @ packages/p$utl_context.pks;
@@ -52,5 +59,3 @@
 @ triggers/ddl_apex.sql;
 @ triggers/ddl_trigger_playground.sql;
 
--- views
-@ views/v_user_ddl_log.sql;
