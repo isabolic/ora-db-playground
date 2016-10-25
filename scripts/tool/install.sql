@@ -37,6 +37,7 @@
 @ scripts/17.update_comp_type_b_entry.sql;
 @ scripts/18.al_ddl_log_revhash.sql;
 @ scripts/19.config_cl_file_location.sql;
+@ scripts/20.ins_apex_auth_setup.sql;
 
 -- views
 @ views/v_user_ddl_log.sql;
