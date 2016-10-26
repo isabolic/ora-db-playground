@@ -68,82 +68,29 @@ create or alter or ddl or
                    l_action := l_action || ';';
                 end if;
             end if;
-            p_log('l_action = ' || l_action);
-            
-            
-            if oper in('CREATE', 'DROP') then
-                 insert into ddl_log
-                          ( id
-                          , operation
-                          , obj_owner
-                          , object_name
-                          , attempt_by
-                          , attempt_dt
-                          , sql_text
-                          , os_user
-                          , is_exported                      
-                          , db_object_type
-                          )
-                 select seq_id.nextval
-                  , ora_sysevent
-                  , ora_dict_obj_owner
-                  , ora_dict_obj_name
-                  , v_apex_user
-                  , sysdate
-                  , l_action
-                  , v_os_user
-                  , 'N'
-                  ,ora_dict_obj_type
-                   from dual;
-            elsif oper = 'ALTER' then
-                 insert into ddl_log
-                  ( id
-                          , operation
-                          , obj_owner
-                          , object_name
-                          , attempt_by
-                          , attempt_dt
-                          , sql_text
-                          , os_user
-                          , is_exported                      
-                          , db_object_type
-                          )
-                 select seq_id.nextval
-                  , ora_sysevent
-                  , ora_dict_obj_owner
-                  , ora_dict_obj_name
-                  , v_apex_user
-                  , sysdate
-                  , l_action
-                  , v_os_user
-                  , 'N'
-                  , ora_dict_obj_type
-                   from dual;
-            else
-                 insert into ddl_log
-                  ( id
-                          , operation
-                          , obj_owner
-                          , object_name
-                          , attempt_by
-                          , attempt_dt
-                          , sql_text
-                          , os_user
-                          , is_exported                      
-                          , db_object_type
-                          )
-                 select seq_id.nextval
-                  , ora_sysevent
-                  , ora_dict_obj_owner
-                  , ora_dict_obj_name
-                  , v_apex_user
-                  , sysdate
-                  , l_action
-                  , v_os_user
-                  , 'N'
-                  , ora_dict_obj_type
-                   from dual;
-            end if;        
+
+            insert into ddl_log
+              ( id
+                      , operation
+                      , obj_owner
+                      , object_name
+                      , attempt_by
+                      , attempt_dt
+                      , sql_text
+                      , os_user
+                      , is_exported                      
+                      , db_object_type
+                      )
+             select seq_id.nextval
+              , ora_sysevent
+              , ora_dict_obj_owner
+              , ora_dict_obj_name
+              , v_apex_user
+              , sysdate
+              , l_action
+              , v_os_user
+              , 'N'
+              , ora_dict_obj_type
+               from dual;
     end ddl_trigger_playground;
 /
-ALTER TRIGGER "DDL_TRIGGER_PLAYGROUND" ENABLE;

@@ -185,27 +185,76 @@
     function are_job_exports_done return number is
     v_is_running number;
     begin
-      select decode(max(job_name), null, 1, 0)
+      select decode(max(id), null, 1, 0)
         into v_is_running
-        from user_scheduler_running_jobs
+        from v_user_ddl_log
        where 1=1
-         and job_name like '%EXPORT%';
-
+         and sql_text is null;
+    
         return v_is_running;
     end are_job_exports_done;
+    
+    function f_get_config_value(p_code varchar2) return varchar2
+    is
+        v_ret varchar2(2000);
+    begin
+        select value
+          into v_ret
+          from config 
+         where code = upper(p_code);
+         
+        return v_ret;
+    
+    end f_get_config_value;
     
     
     function f_get_root_dir return varchar2 
     is
     v_ret varchar2(2000);
     begin
-    select value
-      into v_ret
-      from config 
-     where code = 'VER_CON_ROOT_FOLDER';
-     
-     return v_ret;
+        return f_get_config_value('VER_CON_ROOT_FOLDER');
     end f_get_root_dir;
-end p$ver_ctrl;
+    
+    function f_get_cl_file_location return varchar2
+    is
+     v_ret varchar2(2000); 
+    begin    
+        return f_get_config_value('CHANGE.LOG_FILE_LOCATION');     
+    end f_get_cl_file_location;
+    
+    procedure git_commit(p_message varchar2 default null)
+    is
+      v_report_url  varchar2(2000) := f_get_config_value('NODE_SERVICE');  
+      v_request     utl_http.req;
+      v_response    utl_http.resp;
+      v_res_var     varchar2(32767);
+    begin
+    sys.htp.init;
 
-/
+    v_report_url := v_report_url  || '/saveToVersionCtrl?user=' || p$utl_context.get_user;
+    
+    utl_http.set_transfer_timeout(600);
+    
+  
+    p_log('p$ver_ctrl.git_commit url : ' || v_report_url);
+   
+    v_request := utl_http.begin_request(v_report_url);
+    utl_http.set_header(v_request, 'User-Agent', 'Mozilla/4.0');
+    v_response := utl_http.get_response(v_request);
+    loop
+      begin
+        utl_http.read_text(v_response, v_res_var, 32767);        
+      exception
+        when utl_http.end_of_body then
+          exit;
+      end;
+    end loop;
+    utl_http.end_response(v_response);
+    p_log(v_res_var);
+    exception
+        when others then
+        p_log('git_commit = ' || utl_http.get_detailed_sqlerrm);
+    end git_commit;
+    
+    
+end p$ver_ctrl;
