@@ -118,8 +118,9 @@
     
     -- apex      
     if v_ddl_row.obj_owner = 'APEX' then
-       -- page   
-       if v_ddl_row.apex_page_id is null then
+       -- sh. comp.
+       if     v_ddl_row.apex_page_id is null
+          and v_ddl_row.apex_component_type not like '%STATIC%FILE%'  then
           v_name := lower(
                       translate
                       (
@@ -129,10 +130,14 @@
                            v_ddl_row.object_name || '.' || 
                            v_file_ext
                         ),
-                        ' ', '_'
+                        ' /,', '_'
                       )
                     );
-       -- sh. comp.
+                    
+       -- static files
+       elsif v_ddl_row.apex_component_type like '%STATIC%FILE%'  then
+            v_name :=  v_ddl_row.object_name;
+       -- page   
        else
           v_name := lower(
                       translate
@@ -141,11 +146,12 @@
                           'f' || v_ddl_row.apex_app_id || '_page_' || 
                            v_ddl_row.apex_page_id || '.' || v_file_ext
                          )
-                        , ' ', '_'
+                        , ' /,', '_'
                       )
                     );
        end if;
     else
+    
        -- ddl objects
        select max(id), max(file_ext)
          into v_vcse_id, v_file_ext
@@ -173,7 +179,7 @@
                           v_ddl_row.operation   || '_' || 
                           v_ddl_row.object_name || '.' || v_file_ext
                         )
-                         ,' ', '_' 
+                         ,' /,', '_' 
                       )                      
                    );                      
       end if;
@@ -254,7 +260,10 @@
     exception
         when others then
         p_log('git_commit = ' || utl_http.get_detailed_sqlerrm);
+        raise_application_error(-20343, utl_http.get_detailed_sqlerrm);
     end git_commit;
     
     
 end p$ver_ctrl;
+
+/

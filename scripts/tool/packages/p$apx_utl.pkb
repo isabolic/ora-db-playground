@@ -51,7 +51,8 @@ as
             p_comp_id      number   default null,
             p_component    varchar2 default null,
             p_workspace_id number   default null,
-            p_ddl_id       number   default null
+            p_ddl_id       number   default null,
+            p_theme_id     number   default null
             )
     as
        v_workspace_id number := p_workspace_id;
@@ -72,14 +73,25 @@ as
 
         init_gen_api_clob;
 
-        apex_050000.wwv_flow_gen_api2
-                   .export(  p_flow_id                  => p_app_id
-                           , p_export_ir_public_reports => 'Y'
-                           , p_component_id             => p_comp_id
-                           , p_page_id                  => p_page_id
-                           , p_component                => p_component
-                           ) ;
+        if p_theme_id is null then
+
+            apex_050000.wwv_flow_gen_api2
+                       .export(  p_flow_id                  => p_app_id
+                               , p_export_ir_public_reports => 'Y'
+                               , p_component_id             => p_comp_id
+                               , p_page_id                  => p_page_id
+                               , p_component                => p_component
+                               ) ;
+       else
+          
+            apex_050000.wwv_flow_gen_api2
+                       .export_theme(  
+                                 p_flow_id                  => p_app_id
+                               , p_theme_id                 => p_theme_id
+                               ) ;         
                            
+        end if;                   
+        
         apex_050000.wwv_flow_gen_api2
                    .file_close( p_commit              => true
                                ,p_is_component_export => true );
@@ -109,7 +121,8 @@ as
         p_comp_id      number   default null,
         p_component    varchar2 default null,        
         p_workspace_id number   default null,
-        p_ddl_id       number   default null
+        p_ddl_id       number   default null,
+        p_theme_id     number   default null
     ) is 
       v_job_exe varchar2(32000) :=
                  'DECLARE
@@ -121,7 +134,8 @@ as
                               p_comp_id      => #COMP_ID#, 
                               p_component    => ''#COMPONENT#'',
                               p_workspace_id => #WORKSPACE_ID#,
-                              p_ddl_id       => #DDL_LOG_ID#);
+                              p_ddl_id       => #DDL_LOG_ID#,
+                              p_theme_id     => #THEME_ID#);
                    
                    exception
                    when others then                     
@@ -137,6 +151,7 @@ as
         v_job_exe := replace(v_job_exe, '#WORKSPACE_ID#', null_in_str(p_workspace_id));
         v_job_exe := replace(v_job_exe, '#DDL_LOG_ID#'  , null_in_str(p_ddl_id));
         v_job_exe := replace(v_job_exe, '#USER#'        , p$utl_context.get_user);
+        v_job_exe := replace(v_job_exe, '#THEME_ID#'    , null_in_str(p_theme_id));
         
         v_job_name := 'APEX_EXPORT_' || p_app_id || '_' || p_ddl_id;
         
@@ -148,6 +163,29 @@ as
            auto_drop                =>  true
         );
    end export_via_job;
+   
+   function get_apx_static_file(p_comp_id number, p_table_name varchar2) return blob 
+    is
+    v_sql       varchar2(2000);
+    v_file      blob;
+    begin
+     
+    v_sql := ' select file_content' ||
+             '   from apex_050000.' || p_table_name ||
+             ' where   1=1 ' ||
+             '   and id = '''|| p_comp_id || '''';
+    
+    p_log('get_apx_tab_pk = ' || v_sql);
+    
+    execute immediate v_sql into v_file;  
+    
+    return v_file;
+    
+    exception 
+       when others then
+         p_log(sqlerrm);
+         return null;        
+    end get_apx_static_file;
    
     function get_apx_tab_pk(
             p_table_name   varchar2,
@@ -177,23 +215,35 @@ as
     if p_action = 'I' then
        v_sql := v_sql || '   and created_on  = to_date(''' || v_date_time || ''', ''DD.MM.YYYY HH24:MI:SS'')';
     elsif p_action = 'U' then 
-       v_sql := v_sql || '  and last_updated_by  = to_date(''' || v_date_time || ''', ''DD.MM.YYYY HH24:MI:SS'')';
+       v_sql := v_sql || '  and last_updated_on  = to_date(''' || v_date_time || ''', ''DD.MM.YYYY HH24:MI:SS'')';
     end if;
+    
+    p_log('get_apx_tab_pk = ' || v_sql);
     
     execute immediate v_sql into v_id;
     
     return v_id;
     exception 
        when others then
+         p_log(sqlerrm);
          return null;
     end get_apx_tab_pk;
     
     procedure export_apex_comp_to_ddl_log (
         p_ddl_id      ddl_log.id%type
     ) is
-      v_ddl_row      ddl_log%rowtype;
-      v_apex_table   apex_comp_maping.apex_table_name%type;
-      v_operation    varchar2(1);
+      v_ddl_row       ddl_log%rowtype;
+      v_apex_table    apex_comp_maping.apex_table_name%type;
+      v_operation     varchar2(1);
+      v_theme_id      number;
+      v_blb           blob;
+      v_file          clob;
+      v_warning       integer;
+      v_file_size     integer := dbms_lob.lobmaxsize;
+      v_dest_offset   integer := 1;
+      v_src_offset    integer := 1;
+      v_blob_csid     number := dbms_lob.default_csid;
+      v_lang_context  number := dbms_lob.default_lang_ctx;
       pragma autonomous_transaction; 
     begin
     
@@ -206,14 +256,16 @@ as
        if v_ddl_row.obj_owner != 'APEX' then
           Raise_Application_Error (-20343, 'The ddl_log row is not obj_owner apex');
        end if;
+       
+       select apex_table_name
+         into v_apex_table
+         from apex_comp_maping
+        where comp_type = v_ddl_row.apex_component_type;
         
        if     v_ddl_row.apex_page_id is null 
           and v_ddl_row.apex_comp_id is null then
           
-          select apex_table_name
-            into v_apex_table
-            from apex_comp_maping
-           where comp_type = v_ddl_row.apex_component_type;
+
            
           case 
             when v_ddl_row.operation = 'CREATE' then
@@ -236,19 +288,49 @@ as
             update ddl_log
                set apex_comp_id = v_ddl_row.apex_comp_id
              where id = v_ddl_row.id; 
-             commit;
              
+             p_log (' export_apex_comp_to_ddl_log apex_comp_id = ' || v_ddl_row.apex_comp_id);
        end if;
-      
-       export_via_job (
-            p_app_id        => v_ddl_row.apex_app_id,
-            p_page_id       => v_ddl_row.apex_page_id,
-            p_comp_id       => v_ddl_row.apex_comp_id,
-            p_component     => v_ddl_row.apex_component_type,
-            p_workspace_id  => v_ddl_row.apex_workspace_id,
-            p_ddl_id        => v_ddl_row.id
-       );
-      
+       
+       if v_ddl_row.apex_component_type like '%STATIC%FILE%' then
+            v_blb  := get_apx_static_file(v_ddl_row.apex_comp_id, v_apex_table); 
+            dbms_lob.createtemporary(v_file, true);
+            
+            dbms_lob.converttoclob(
+                    v_file,
+                    v_blb,
+                    v_file_size,
+                    v_dest_offset,
+                    v_src_offset,
+                    v_blob_csid,
+                    v_lang_context,
+                    v_warning);
+            
+            update ddl_log
+               set sql_text = v_file
+             where id = v_ddl_row.id;
+       end if;
+             
+       commit;
+       
+       if v_ddl_row.apex_component_type not like '%STATIC%FILE%' then
+           if v_ddl_row.apex_component_type = 'THEME' then
+              select max(theme_id)
+                into v_theme_id
+                from apex_050000.WWV_FLOW_THEMES
+               where id = v_ddl_row.apex_comp_id;
+           end if;
+          
+           export_via_job (
+                p_app_id        => v_ddl_row.apex_app_id,
+                p_page_id       => v_ddl_row.apex_page_id,
+                p_comp_id       => v_ddl_row.apex_comp_id,
+                p_component     => v_ddl_row.apex_component_type,
+                p_workspace_id  => v_ddl_row.apex_workspace_id,
+                p_ddl_id        => v_ddl_row.id,
+                p_theme_id      => v_theme_id
+           );
+       end if;
       
       
     end export_apex_comp_to_ddl_log;

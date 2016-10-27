@@ -38,6 +38,8 @@
 @ scripts/18.al_ddl_log_revhash.sql;
 @ scripts/19.config_cl_file_location.sql;
 @ scripts/20.ins_apex_auth_setup.sql;
+@ scripts/21.al_acmp_exp_apex_cmp.sql
+@ scripts/22.total_import.sql;
 
 -- views
 @ views/v_user_ddl_log.sql;
